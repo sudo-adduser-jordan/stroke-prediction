@@ -1,0 +1,9 @@
+streamlit
+scikit_learn
+matplotlib
+joblib
+numpy
+pandas
+graphviz
+missingno
+notebook
