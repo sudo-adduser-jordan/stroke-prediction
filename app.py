@@ -1,7 +1,5 @@
 import matplotlib
-import sklearn
 import streamlit 
-import sklearn
 import pandas
 import joblib
 import numpy
@@ -9,20 +7,12 @@ import seaborn
 
 # id,gender,age,hypertension,heart_disease,ever_married,work_type,Residence_type,avg_glucose_level,bmi,smoking_status,stroke
 target = 'stroke'
-numerical_labels = ['age', 'hypertension', 'heart_disease', 'avg_glucose_level', 'bmi']
 categorical_labels = ['gender', 'ever_married', 'work_type', 'Residence_type', 'smoking_status']
 labels = ['gender','age','hypertension','heart_disease','ever_married','work_type','Residence_type','avg_glucose_level','bmi','smoking_status']
 coded_labels = ['age', 'hypertension', 'heart_disease', 'avg_glucose_level', 'bmi', 'gender_Male', 'ever_married_Yes', 'work_type_Non-working', 'work_type_Private', 'work_type_Self-employed', 'Residence_type_Urban', 'smoking_status_never smoked', 'smoking_status_smokes']
 
 model = joblib.load('random_forest_model.pkl')
 data_frame_cleand = pandas.read_csv('data_clean.csv')
-
-X = data_frame_cleand.drop(columns='stroke')
-y = data_frame_cleand['stroke']
-
-X_encoded = pandas.get_dummies(X, columns=categorical_labels, drop_first=True)
-X_train, X_temp, y_train, y_temp = sklearn.model_selection.train_test_split(X_encoded, y, test_size=0.2, random_state=42, stratify=y)
-X_val, X_test, y_val, y_test = sklearn.model_selection.train_test_split(X_temp, y_temp, test_size=0.25, random_state=42, stratify=y_temp)
 
 if 'page' not in streamlit.session_state:
     streamlit.session_state['page'] = 'Home'
@@ -33,22 +23,22 @@ if streamlit.session_state['page'] == 'Home':
         streamlit.header('Enter patient Information')
 
         gender = streamlit.selectbox('Gender', options=['Male','Female'])
-        age = streamlit.number_input('Age', min_value=0.0, max_value=100.0, value=67.0)
-        hypertension = streamlit.selectbox('Hypertension', options=['0', '1'])
-        heart_disease = streamlit.selectbox('Heart Disease', options=['1', '0'])
-        ever_married = streamlit.selectbox('Ever Married', options=['Yes', 'No'])
-        work = streamlit.text_input('Work', value='Private')
-        residence = streamlit.selectbox('Residence', options=['Urban', 'Rural'])
-        avg_glucose_level = streamlit.number_input('Average Glucose Level', min_value=0.0, max_value=300.0, value=228.69)
-        bmi = streamlit.number_input('Body Mass Index', min_value=0.0, max_value=70.0, value=25.0, format='%.1f')
+        age = streamlit.number_input('Age', min_value=0, max_value=100, value=30)
+        hypertension = streamlit.selectbox('Hypertension', options=['No', 'Yes'])
+        heart_disease = streamlit.selectbox('Heart Disease', options=['No', 'Yes'])
+        ever_married = streamlit.selectbox('Ever Married', options=['No', 'Yes'])
+        work = streamlit.selectbox('Work', options=['Private', 'Govt_job', 'Never_worked','Self-employed', 'children'])
+        residence = streamlit.selectbox('Residence', options=['Rural', 'Urban'])
+        avg_glucose_level = streamlit.number_input('Average Glucose Level', min_value=0, max_value=300, value=180)
+        bmi = streamlit.number_input('Body Mass Index', min_value=0, max_value=70, value=20)
         smoking_status = streamlit.selectbox('Smoking Status', options=['formerly smoked', 'never smoked',  'smokes'])
 
         if streamlit.form_submit_button('Submit'):
             streamlit.session_state['user_input'] = numpy.array([[
                 gender,
                 age,
-                hypertension,
-                heart_disease,
+                1 if hypertension == 'Yes' else 0,
+                1 if heart_disease == 'Yes' else 0,
                 ever_married,
                 work,
                 residence,
@@ -62,30 +52,17 @@ if streamlit.session_state['page'] == 'Home':
 
 
 elif streamlit.session_state['page'] == 'Result':
-    pandas.set_option('display.width', 1000)
-    pandas.set_option('display.max_colwidth', None)
-
     input_data = pandas.DataFrame(streamlit.session_state['user_input'], columns=labels)
-    print(input_data)
-    print(X.head(1))
-    
-    test = pandas.get_dummies(X.head(1), columns=categorical_labels)
-    print(test)
-
-
-    input_data = pandas.get_dummies(input_data, columns=categorical_labels)
-    input_data = input_data.reindex(columns=coded_labels, fill_value=0)
-    print(input_data)
+    input_data = pandas.get_dummies(input_data, columns=categorical_labels).reindex(columns=coded_labels, fill_value=0)
 
     streamlit.title('Stroke Prediction Results')
 
     prediction = model.predict(input_data)
 
-    streamlit.success(f'The random forest model predicts: {prediction[0]}')
     if prediction[0] == 1:
-            streamlit.error('The random forest model predicts: High Risk')
+            streamlit.error('High Risk')
     if prediction[0] == 0:
-            streamlit.success('The random forest model predicts: Low Risk')
+            streamlit.success('Low Risk')
 
     # feature importance
     streamlit.subheader("feature importance")
@@ -146,18 +123,6 @@ elif streamlit.session_state['page'] == 'Result':
     ax4.set_ylabel('number of patients')
     ax4.legend()
     streamlit.pyplot(fig5)
-
-    # # confusion matrix
-    # y_pred = model.predict(X_test)
-    # matrix = sklearn.metrics.confusion_matrix(y_test, y_pred)
-    # cm_percentage = matrix.astype('float') / matrix.sum(axis=1)[:, numpy.newaxis] * 100
-    # # cm_percentage = matrix.astype('float') / matrix.sum() * 100
-    # display = sklearn.metrics.ConfusionMatrixDisplay(confusion_matrix=cm_percentage, display_labels=["no stroke", "stroke"])
-    # streamlit.subheader('random tree confusion matrix')
-    # # seaborn.heatmap(cm_percentage, annot=True, fmt=".2f", cmap="Blues", xticklabels=["no stroke", "stroke"], yticklabels=["no stroke", "stroke"])
-    # figure, ax = matplotlib.pyplot.subplots(figsize=(5, 5))
-    # display.plot(ax=ax, values_format=".2f")
-    # streamlit.pyplot(figure)
 
     if streamlit.button('Return'):
         streamlit.success('Redirecting to Home page.')
